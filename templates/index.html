@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Beerview{% if selected %} — {{ selected }}{% endif %}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f0f0f;
+      color: #f0ede6;
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 1.75rem;
+    }
+
+    header h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: #f5c842;
+    }
+
+    /* ── brewpub tabs ── */
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      justify-content: center;
+      max-width: 1100px;
+      margin: 0 auto 2rem;
+    }
+
+    .tab {
+      display: block;
+      text-decoration: none;
+      padding: 0.45rem 1rem;
+      border-radius: 20px;
+      font-size: 0.88rem;
+      font-weight: 500;
+      border: 1px solid #2e2e2e;
+      color: #aaa;
+      background: #1a1a1a;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .tab:hover { border-color: #f5c842; color: #f5c842; }
+
+    .tab.active {
+      background: #f5c842;
+      border-color: #f5c842;
+      color: #0f0f0f;
+      font-weight: 700;
+    }
+
+    .tab .since {
+      font-size: 0.72rem;
+      opacity: 0.65;
+      display: block;
+      margin-top: 1px;
+    }
+
+    /* ── upload form ── */
+    .upload-form {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .upload-form label {
+      background: #1c1c1c;
+      border: 1px dashed #444;
+      border-radius: 8px;
+      padding: 0.55rem 1.1rem;
+      cursor: pointer;
+      font-size: 0.9rem;
+      color: #aaa;
+      transition: border-color 0.15s;
+    }
+
+    .upload-form label:hover { border-color: #f5c842; color: #f5c842; }
+    .upload-form input[type="file"] { display: none; }
+
+    .upload-form input[type="text"] {
+      background: #1c1c1c;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 0.55rem 0.9rem;
+      font-size: 0.9rem;
+      color: #f0ede6;
+      width: 200px;
+    }
+
+    .upload-form input[type="text"]::placeholder { color: #555; }
+    .upload-form input[type="text"]:focus { outline: none; border-color: #f5c842; }
+
+    .upload-form .file-name {
+      font-size: 0.85rem;
+      color: #666;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .upload-form button {
+      background: #f5c842;
+      color: #0f0f0f;
+      border: none;
+      border-radius: 8px;
+      padding: 0.55rem 1.25rem;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    .upload-form button:hover { opacity: 0.85; }
+
+    /* ── flash messages ── */
+    .flash {
+      max-width: 1100px;
+      margin: 0 auto 1.5rem;
+      padding: 0.75rem 1.25rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+
+    .flash.success { background: #1a2e1a; border: 1px solid #2d5a2d; color: #7ec97e; }
+    .flash.error   { background: #2e1a1a; border: 1px solid #5a2d2d; color: #c97e7e; }
+
+    /* ── beer grid ── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.25rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: #1c1c1c;
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+
+    .tap-num {
+      background: #f5c842;
+      color: #0f0f0f;
+      font-weight: 800;
+      font-size: 0.8rem;
+      border-radius: 6px;
+      padding: 0.2rem 0.5rem;
+      white-space: nowrap;
+      margin-top: 3px;
+    }
+
+    .beer-name {
+      font-size: 1.1rem;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      font-size: 0.82rem;
+    }
+
+    .tag {
+      background: #2a2a2a;
+      border-radius: 4px;
+      padding: 0.15rem 0.5rem;
+      color: #aaa;
+    }
+
+    .brewery-link {
+      display: inline-block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #b89a30;
+      text-decoration: none;
+      margin-top: 0.1rem;
+    }
+
+    .brewery-link:hover { color: #f5c842; text-decoration: underline; }
+
+    .brewery-name {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #888;
+      margin-top: 0.1rem;
+    }
+
+    .abv {
+      color: #f5c842;
+      background: transparent;
+      padding: 0;
+      font-weight: 600;
+    }
+
+    .notes {
+      font-size: 0.82rem;
+      color: #777;
+      font-style: italic;
+    }
+
+    .prices {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.25rem;
+    }
+
+    .price-pill {
+      background: #252525;
+      border: 1px solid #333;
+      border-radius: 20px;
+      padding: 0.2rem 0.65rem;
+      font-size: 0.8rem;
+      color: #ccc;
+    }
+
+    .price-pill span { color: #f5c842; font-weight: 600; }
+
+    .card-footer {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: auto;
+      padding-top: 0.5rem;
+      border-top: 1px solid #222;
+      font-size: 0.75rem;
+      color: #555;
+    }
+
+    .empty {
+      text-align: center;
+      color: #555;
+      margin-top: 4rem;
+      font-size: 1.1rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🍺 Beerview</h1>
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="flash {{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {% if brewpubs %}
+  <nav class="tabs">
+    <a href="/" class="tab{% if not selected %} active{% endif %}">All</a>
+    {% for b in brewpubs %}
+    <a href="/?brewpub={{ b.brewpub | urlencode }}"
+       class="tab{% if selected == b.brewpub %} active{% endif %}">
+      {{ b.brewpub }}
+      <span class="since">updated {{ b.uploaded_at.strftime('%b %-d') }}</span>
+    </a>
+    {% endfor %}
+  </nav>
+  {% endif %}
+
+  <form class="upload-form" action="/upload" method="post" enctype="multipart/form-data">
+    <label for="image-input">📷 Choose menu photo</label>
+    <input type="file" id="image-input" name="image" accept="image/*"
+           onchange="document.getElementById('file-name').textContent = this.files[0]?.name ?? ''">
+    <span class="file-name" id="file-name"></span>
+    <input type="text" name="brewpub" placeholder="Brew pub name"
+           value="{{ selected or '' }}">
+    <button type="submit">Upload &amp; Extract</button>
+  </form>
+
+  {% if beers %}
+  <div class="grid">
+    {% for beer in beers %}
+    <div class="card">
+      <div class="card-header">
+        {% if beer.tap_number %}<span class="tap-num">TAP {{ beer.tap_number }}</span>{% endif %}
+        <div>
+          <span class="beer-name">{{ beer.name }}</span>
+          {% if beer.brewery %}
+            {% if beer.brewery_url %}
+              <a class="brewery-link" href="{{ beer.brewery_url }}" target="_blank" rel="noopener">{{ beer.brewery }} ↗</a>
+            {% else %}
+              <span class="brewery-name">{{ beer.brewery }}</span>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="meta">
+        {% if beer.abv %}<span class="tag abv">{{ beer.abv }}% ABV</span>{% endif %}
+        {% if beer.style %}<span class="tag">{{ beer.style }}</span>{% endif %}
+      </div>
+
+      {% if beer.notes %}
+      <p class="notes">{{ beer.notes }}</p>
+      {% endif %}
+
+      {% if beer.prices %}
+      <div class="prices">
+        {% for p in beer.prices %}
+        <div class="price-pill">
+          {% if p.size_oz %}{{ p.size_oz }}oz{% else %}?oz{% endif %}
+          &nbsp;<span>{% if p.price is not none %}${{ "%.2f"|format(p.price) }}{% else %}?{% endif %}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="card-footer">
+        {% if not selected and beer.brewpub %}<span>📍 {{ beer.brewpub }}</span>{% endif %}
+        {% if beer.created_at %}<span>{{ beer.created_at.strftime('%b %-d, %Y %-I:%M %p') }}</span>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="empty">No beers found. Upload a menu photo to get started.</p>
+  {% endif %}
+</body>
+</html>
